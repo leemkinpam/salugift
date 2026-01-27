@@ -16,13 +16,12 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { ScanLine, Plus, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Camera, Loader2 } from 'lucide-react';
 
-const FormSchema = ItemSchema.omit({ id: true, createdAt: true });
+const FormSchema = ItemSchema.pick({ barcode: true });
 
 export function ScanForm() {
   const { toast } = useToast();
@@ -33,8 +32,6 @@ export function ScanForm() {
     resolver: zodResolver(FormSchema),
     defaultValues: {
       barcode: '',
-      name: '',
-      quantity: 1,
     },
   });
 
@@ -42,27 +39,23 @@ export function ScanForm() {
     startTransition(async () => {
       const formData = new FormData();
       formData.append('barcode', data.barcode);
-      formData.append('name', data.name);
-      formData.append('quantity', String(data.quantity));
 
       const result = await createItem({ success: false }, formData);
 
       if (result.success) {
         toast({
-          title: 'Success!',
+          title: '成功！',
           description: result.message,
         });
         form.reset();
       } else {
         toast({
-          title: 'Error',
-          description: result.message || 'An unknown error occurred.',
+          title: '錯誤',
+          description: result.message || '發生未知錯誤。',
           variant: 'destructive',
         });
         if (result.errors) {
           if (result.errors.barcode) form.setError('barcode', { message: result.errors.barcode[0] });
-          if (result.errors.name) form.setError('name', { message: result.errors.name[0] });
-          if (result.errors.quantity) form.setError('quantity', { message: result.errors.quantity[0] });
         }
       }
     });
@@ -74,76 +67,43 @@ export function ScanForm() {
 
   return (
     <>
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Add New Item</CardTitle>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <CardContent className="space-y-6">
+      <Card className="shadow-lg rounded-2xl bg-white">
+        <CardContent className="p-6">
+          <p className="text-center text-xs tracking-widest text-muted-foreground mb-4">REDEMPTION PORTAL</p>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="barcode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Barcode</FormLabel>
                     <div className="flex gap-2">
                       <FormControl>
-                        <Input placeholder="Scan or enter barcode" {...field} />
+                        <Input className="h-14 text-lg rounded-lg" placeholder="輸入或掃描條碼" {...field} />
                       </FormControl>
                       <Button
                         type="button"
-                        variant="outline"
-                        size="icon"
+                        className="h-14 w-20 rounded-lg flex-col gap-1"
                         onClick={() => setScannerOpen(true)}
                         aria-label="Scan barcode"
                       >
-                        <ScanLine className="h-4 w-4" />
+                        <Camera className="h-6 w-6" />
+                        <span className="text-xs font-bold">SCAN</span>
                       </Button>
                     </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Clean Code" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantity</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full" disabled={isPending}>
+              <Button type="submit" variant="secondary" className="w-full h-14 text-lg rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500" disabled={isPending}>
                 {isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="mr-2 h-4 w-4" />
-                )}
-                {isPending ? 'Adding...' : 'Add Item'}
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : null}
+                {isPending ? '提交中...' : '提交核銷'}
               </Button>
-            </CardFooter>
-          </form>
-        </Form>
+            </form>
+          </Form>
+        </CardContent>
       </Card>
       <BarcodeScanner open={isScannerOpen} onOpenChange={setScannerOpen} onScan={handleScan} />
     </>

@@ -17,13 +17,13 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
     let timer: NodeJS.Timeout;
     if (open) {
       setIsScanning(true);
-      // Simulate a scan after 3 seconds
+      // Simulate a scan after 2 seconds
       timer = setTimeout(() => {
-        const mockBarcode = Math.random().toString().slice(2, 15);
+        const mockBarcode = `A${Math.random().toString().slice(2, 8).toUpperCase()}`;
         onScan(mockBarcode);
         setIsScanning(false);
         onOpenChange(false);
-      }, 3000);
+      }, 2000);
     } else {
       setIsScanning(false);
     }
@@ -36,7 +36,7 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden">
-        <div className="relative aspect-square w-full bg-slate-900 flex items-center justify-center">
+        <div className="relative aspect-square w-full bg-black flex items-center justify-center">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-1/3 border-2 border-dashed border-slate-400 rounded-lg"></div>
 
           {isScanning && (
@@ -45,18 +45,18 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
             </div>
           )}
           
-          <p className="z-10 text-white/80">Simulating camera feed...</p>
+          <p className="z-10 text-white/80">模擬相機畫面...</p>
         </div>
         <div className="p-6 pt-2">
             <DialogHeader>
-                <DialogTitle>Scanning Barcode</DialogTitle>
+                <DialogTitle>掃描條碼</DialogTitle>
                 <DialogDescription>
-                    Point your camera at a barcode. The scan will complete automatically.
+                    將您的相機對準條碼。掃描將自動完成。
                 </DialogDescription>
             </DialogHeader>
             <div className="mt-4">
               <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
-                  Cancel
+                  取消
               </Button>
             </div>
         </div>

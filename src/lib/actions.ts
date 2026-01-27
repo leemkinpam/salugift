@@ -2,13 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 import { ItemSchema } from './definitions';
-import { addItem } from './supabase';
+import { addItem, deleteItem as dbDeleteItem } from './supabase';
 
 export type ActionState = {
   errors?: {
     barcode?: string[];
-    name?: string[];
-    quantity?: string[];
   };
   message?: string | null;
   success: boolean;
@@ -19,14 +17,12 @@ const CreateItem = ItemSchema.omit({ id: true, createdAt: true });
 export async function createItem(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const validatedFields = CreateItem.safeParse({
     barcode: formData.get('barcode'),
-    name: formData.get('name'),
-    quantity: formData.get('quantity'),
   });
 
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Missing or invalid fields. Failed to add item.',
+      message: '欄位缺失或無效。新增項目失敗。',
       success: false,
     };
   }
@@ -34,8 +30,18 @@ export async function createItem(prevState: ActionState, formData: FormData): Pr
   try {
     await addItem(validatedFields.data);
     revalidatePath('/');
-    return { message: 'Item added successfully.', success: true, errors: {} };
+    return { message: '成功新增項目。', success: true, errors: {} };
   } catch (e) {
-    return { message: 'Database Error: Failed to add item.', success: false };
+    return { message: '資料庫錯誤：新增項目失敗。', success: false };
+  }
+}
+
+export async function deleteItem(id: string): Promise<{ message: string, success: boolean }> {
+  try {
+    await dbDeleteItem(id);
+    revalidatePath('/');
+    return { message: '已刪除項目。', success: true };
+  } catch (e) {
+    return { message: '資料庫錯誤：刪除項目失敗。', success: false };
   }
 }
