@@ -5,6 +5,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CameraOff } from 'lucide-react';
+
+// Define types for the BarcodeDetector API
+interface BarcodeDetectorOptions {
+  formats: string[];
+}
+
+interface DetectedBarcode {
+  rawValue: string;
+}
+
+declare global {
+  interface Window {
+    BarcodeDetector: {
+      new(options?: BarcodeDetectorOptions): any;
+      getSupportedFormats(): Promise<string[]>;
+    }
+  }
+}
 
 interface BarcodeScannerProps {
   open: boolean;
@@ -16,19 +35,24 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
   const { toast } = useToast();
   const [isScanning, setIsScanning] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [isDetectorSupported, setIsDetectorSupported] = useState<boolean | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    const getCameraPermission = async () => {
+    // This effect handles camera permissions and checks for BarcodeDetector support when the dialog opens.
+    const setupScanner = async () => {
+      // 1. Check for BarcodeDetector support
+      if (!('BarcodeDetector' in window)) {
+        setIsDetectorSupported(false);
+      } else {
+        setIsDetectorSupported(true);
+      }
+
+      // 2. Get camera permissions
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         console.error('Camera API not supported');
         setHasCameraPermission(false);
-        toast({
-          variant: 'destructive',
-          title: '錯誤',
-          description: '您的瀏覽器不支援相機功能。',
-        });
         return;
       }
       try {
@@ -41,11 +65,6 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
       } catch (error) {
         console.error('Error accessing camera:', error);
         setHasCameraPermission(false);
-        toast({
-          variant: 'destructive',
-          title: '相機權限遭拒',
-          description: '請在您的瀏覽器設定中啟用相機權限以使用此功能。',
-        });
       }
     };
 
@@ -57,38 +76,85 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
+      setHasCameraPermission(null);
+      setIsDetectorSupported(null);
+      setIsScanning(false);
     };
 
     if (open) {
-      getCameraPermission();
+      setupScanner();
     } else {
       stopCamera();
     }
 
     return () => {
-      stopCamera();
+      stopCamera(); // Cleanup on unmount
     };
-  }, [open, toast]);
+  }, [open]);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (open && hasCameraPermission) {
-      setIsScanning(true);
-      // Simulate a scan after 2 seconds
-      timer = setTimeout(() => {
-        const mockBarcode = `U${String(Math.floor(Math.random() * 1000000000000)).padStart(12, '0')}`;
-        onScan(mockBarcode);
-        setIsScanning(false);
-        onOpenChange(false);
-      }, 2000);
-    } else {
-      setIsScanning(false);
+    // This effect handles the actual barcode detection logic.
+    if (!open || !hasCameraPermission || !isDetectorSupported) {
+      return;
     }
 
-    return () => {
-      clearTimeout(timer);
+    const video = videoRef.current;
+    if (!video) return;
+
+    const barcodeDetector = new window.BarcodeDetector({ formats: ['code_128'] });
+    let animationFrameId: number;
+
+    const detectBarcode = async () => {
+      if (video.readyState < video.HAVE_METADATA) {
+        animationFrameId = requestAnimationFrame(detectBarcode);
+        return;
+      }
+      try {
+        const barcodes: DetectedBarcode[] = await barcodeDetector.detect(video);
+        if (barcodes.length > 0) {
+          onScan(barcodes[0].rawValue);
+          onOpenChange(false);
+        } else {
+          animationFrameId = requestAnimationFrame(detectBarcode);
+        }
+      } catch (e) {
+        console.error('Barcode detection failed:', e);
+        // This can happen if the document is not focused.
+        animationFrameId = requestAnimationFrame(detectBarcode);
+      }
     };
-  }, [open, hasCameraPermission, onScan, onOpenChange]);
+
+    const handleVideoPlaying = () => {
+        setIsScanning(true);
+        animationFrameId = requestAnimationFrame(detectBarcode);
+    };
+    
+    video.addEventListener('playing', handleVideoPlaying);
+
+    // Timeout for showing "not found" message
+    const scanTimeout = setTimeout(() => {
+      if (open) { // Check if the dialog is still open
+        toast({
+          variant: 'destructive',
+          title: '掃描超時',
+          description: '找不到條碼，請將條碼置於掃描框內再試一次。',
+        });
+        onOpenChange(false);
+      }
+    }, 15000); // 15 seconds
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      clearTimeout(scanTimeout);
+      video.removeEventListener('playing', handleVideoPlaying);
+      setIsScanning(false);
+    };
+  }, [open, hasCameraPermission, isDetectorSupported, onScan, onOpenChange, toast]);
+  
+  const showUnsupportedError = isDetectorSupported === false;
+  const showPermissionError = hasCameraPermission === false;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -96,22 +162,27 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
         <div className="relative aspect-square w-full bg-black flex items-center justify-center">
           <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
           
-          {hasCameraPermission === false && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-4">
-              <Alert variant="destructive">
-                <AlertTitle>需要相機權限</AlertTitle>
-                <AlertDescription>
-                  請允許相機權限以使用此功能。
-                </AlertDescription>
-              </Alert>
+          {(showPermissionError || showUnsupportedError) && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 p-4 text-center">
+                <CameraOff className="h-16 w-16 text-destructive mb-4" />
+                <Alert variant="destructive">
+                    <AlertTitle>
+                        {showPermissionError ? '需要相機權限' : '瀏覽器不支援'}
+                    </AlertTitle>
+                    <AlertDescription>
+                        {showPermissionError
+                        ? '請允許相機權限以使用掃描功能。'
+                        : '您的瀏覽器不支援條碼掃描功能。'}
+                    </AlertDescription>
+                </Alert>
             </div>
           )}
 
-          {hasCameraPermission === null && !open && (
-             <p className="z-10 text-white/80">正在請求相機權限...</p>
+          {hasCameraPermission === null && isDetectorSupported === null && (
+             <p className="z-10 text-white/80">正在啟動相機...</p>
           )}
 
-          {hasCameraPermission && (
+          {hasCameraPermission && isDetectorSupported && (
             <>
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-1/3 border-2 border-dashed border-purple-300 rounded-lg"></div>
               {isScanning && (
