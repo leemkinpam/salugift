@@ -101,7 +101,7 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
     const video = videoRef.current;
     if (!video) return;
 
-    const barcodeDetector = new window.BarcodeDetector({ formats: ['code_128'] });
+    const barcodeDetector = new window.BarcodeDetector({ formats: ['code_39'] });
     let animationFrameId: number;
 
     const detectBarcode = async () => {
