@@ -21,6 +21,16 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
 
   useEffect(() => {
     const getCameraPermission = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error('Camera API not supported');
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: '錯誤',
+          description: '您的瀏覽器不支援相機功能。',
+        });
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         streamRef.current = stream;
@@ -47,7 +57,6 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
-      setHasCameraPermission(null);
     };
 
     if (open) {
@@ -67,7 +76,7 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
       setIsScanning(true);
       // Simulate a scan after 2 seconds
       timer = setTimeout(() => {
-        const mockBarcode = `A${Math.random().toString().slice(2, 8).toUpperCase()}`;
+        const mockBarcode = `C128-${Math.random().toString(36).substring(2, 12).toUpperCase()}`;
         onScan(mockBarcode);
         setIsScanning(false);
         onOpenChange(false);
@@ -98,26 +107,26 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
             </div>
           )}
 
-          {hasCameraPermission === null && (
-            <p className="z-10 text-white/80">正在請求相機權限...</p>
+          {hasCameraPermission === null && !open && (
+             <p className="z-10 text-white/80">正在請求相機權限...</p>
           )}
 
           {hasCameraPermission && (
             <>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-1/3 border-2 border-dashed border-slate-400 rounded-lg"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-1/3 border-2 border-dashed border-purple-300 rounded-lg"></div>
               {isScanning && (
-                <div className="absolute inset-0 overflow-hidden">
-                  <div className="animate-scan absolute w-full h-1 bg-primary/70 shadow-[0_0_10px_2px_hsl(var(--primary))]"></div>
+                <div className="absolute inset-0 overflow-hidden rounded-lg">
+                  <div className="animate-scan absolute w-full h-1 bg-purple-400/80 shadow-[0_0_10px_2px_hsl(var(--primary))]"></div>
                 </div>
               )}
             </>
           )}
         </div>
-        <div className="p-6 pt-2">
+        <div className="p-6 pt-4">
             <DialogHeader>
                 <DialogTitle>掃描條碼</DialogTitle>
                 <DialogDescription>
-                    將您的相機對準條碼。掃描將自動完成。
+                    將您的相機對準條碼，系統將會自動掃描。
                 </DialogDescription>
             </DialogHeader>
             <div className="mt-4">
