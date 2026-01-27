@@ -76,7 +76,7 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
       setIsScanning(true);
       // Simulate a scan after 2 seconds
       timer = setTimeout(() => {
-        const mockBarcode = `C128-${Math.random().toString(36).substring(2, 12).toUpperCase()}`;
+        const mockBarcode = `U${String(Math.floor(Math.random() * 1000000000000)).padStart(12, '0')}`;
         onScan(mockBarcode);
         setIsScanning(false);
         onOpenChange(false);
