@@ -2,9 +2,9 @@ import type { Item } from './definitions';
 
 // This is a mock database. In a real app, you would initialize and use the Supabase client here.
 const initialItems: Item[] = [
-    { id: '1', barcode: 'U159001922437', createdAt: new Date('2026-01-27T09:18:11Z') },
-    { id: '2', barcode: 'U123456789012', createdAt: new Date('2026-01-26T14:30:00Z') },
-    { id: '3', barcode: 'U098765432109', createdAt: new Date('2026-01-25T11:00:00Z') },
+    { id: '1', barcode: 'CODE39-1', createdAt: new Date('2026-01-27T09:18:11Z') },
+    { id: '2', barcode: 'CODE39-2', createdAt: new Date('2026-01-26T14:30:00Z') },
+    { id: '3', barcode: 'CODE39-3', createdAt: new Date('2026-01-25T11:00:00Z') },
 ];
 
 let items: Item[] = [...initialItems];

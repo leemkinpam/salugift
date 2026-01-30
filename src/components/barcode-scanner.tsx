@@ -46,7 +46,12 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
       if (!('BarcodeDetector' in window)) {
         setIsDetectorSupported(false);
       } else {
-        setIsDetectorSupported(true);
+        const supportedFormats = await window.BarcodeDetector.getSupportedFormats();
+        if (supportedFormats.includes('code_39')) {
+            setIsDetectorSupported(true);
+        } else {
+            setIsDetectorSupported(false);
+        }
       }
 
       // 2. Get camera permissions
@@ -101,7 +106,7 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
     const video = videoRef.current;
     if (!video) return;
 
-    const barcodeDetector = new window.BarcodeDetector({ formats: ['code_128'] });
+    const barcodeDetector = new window.BarcodeDetector({ formats: ['code_39'] });
     let animationFrameId: number;
 
     const detectBarcode = async () => {
@@ -172,7 +177,7 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
                     <AlertDescription>
                         {showPermissionError
                         ? '請允許相機權限以使用掃描功能。'
-                        : '您的瀏覽器不支援條碼掃描功能。'}
+                        : '您的瀏覽器不支援 Code 39 條碼掃描功能。'}
                     </AlertDescription>
                 </Alert>
             </div>
