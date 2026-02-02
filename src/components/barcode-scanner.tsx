@@ -43,15 +43,11 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
     // This effect handles camera permissions and checks for BarcodeDetector support when the dialog opens.
     const setupScanner = async () => {
       // 1. Check for BarcodeDetector support
+      // 檢查瀏覽器是否支援原生條碼偵測 API (目前 Safari 支援度有限，Chrome 較佳)
       if (!('BarcodeDetector' in window)) {
-        setIsDetectorSupported(false);
+        setIsDetectorSupported(false);// 若不支援，掃描功能將完全無法啟動
       } else {
-        const supportedFormats = await window.BarcodeDetector.getSupportedFormats();
-        if (supportedFormats.includes('code_39')) {
-            setIsDetectorSupported(true);
-        } else {
-            setIsDetectorSupported(false);
-        }
+        setIsDetectorSupported(true);
       }
 
       // 2. Get camera permissions
@@ -61,7 +57,9 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
         return;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        // facingMode: "environment" 強制使用後置鏡頭，這對於掃描條碼至關重要
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });// 若設為 "user" 會變成前鏡頭，導致對焦困難
+        // 建議可加入 width, height 或 frameRate 限制來優化掃描效能
         streamRef.current = stream;
         setHasCameraPermission(true);
         if (videoRef.current) {
@@ -75,6 +73,7 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
 
     const stopCamera = () => {
       if (streamRef.current) {
+         // 停止所有軌道，否則鏡頭燈號會持續亮著，且佔用系統資源
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
@@ -106,9 +105,15 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
     const video = videoRef.current;
     if (!video) return;
 
-    const barcodeDetector = new window.BarcodeDetector({ formats: ['code_39'] });
+    // BarcodeDetector 的實例化 (需定義支援的格式，如 'qr_code', 'code_128' 等)
+    // 若格式未正確定義，偵測器將無法辨識特定的條碼類型
+    const barcodeDetector = new window.BarcodeDetector({ formats: ['code_39','code_128', 'ean_13', 'qr_code'] }); // 這裡定義的 Array 直接決定能掃什麼
     let animationFrameId: number;
 
+    // 掃描邏輯通常會放在 requestAnimationFrame 或 setInterval 中
+    // 若掃描頻率太高 (無間隔)，會造成手機發燙或畫面卡頓
+    // 若太低，使用者會感覺掃描反應遲鈍
+    
     const detectBarcode = async () => {
       if (video.readyState < video.HAVE_METADATA) {
         animationFrameId = requestAnimationFrame(detectBarcode);
@@ -117,7 +122,7 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
       try {
         const barcodes: DetectedBarcode[] = await barcodeDetector.detect(video);
         if (barcodes.length > 0) {
-          onScan(barcodes[0].rawValue);
+          onScan(barcodes[0].rawValue);// 成功回傳結果
           onOpenChange(false);
         } else {
           animationFrameId = requestAnimationFrame(detectBarcode);
@@ -131,28 +136,37 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
 
     const handleVideoPlaying = () => {
         setIsScanning(true);
+        // requestAnimationFrame 是關鍵：它會隨瀏覽器更新頻率（通常 60fps）執行 detectBarcode
+        // 若 detectBarcode 內運算量太大，會造成畫面卡頓或手機過熱
         animationFrameId = requestAnimationFrame(detectBarcode);
     };
-    
+
+    // 監聽 'playing' 事件：確保影像流已經真正開始播放才啟動掃描
+    // 若影像未載入就偵測，BarcodeDetector 會因抓不到 Frame 而報錯或無反應
     video.addEventListener('playing', handleVideoPlaying);
 
     // Timeout for showing "not found" message
+    // 為了防止程式在背景無限期消耗相機資源與電力，這段程式碼設定了保護機制
+    // 掃描超時機制：15 秒內未偵測到條碼則強制關閉
     const scanTimeout = setTimeout(() => {
       if (open) { // Check if the dialog is still open
         toast({
           variant: 'destructive',
-          title: '掃描超時',
+          title: '掃描超時',// 若條碼受損、光線不足或對焦失敗，15秒後會自動彈出提示
           description: '找不到條碼，請將條碼置於掃描框內再試一次。',
         });
-        onOpenChange(false);
+        onOpenChange(false); // 這裡會觸發 Cleanup 停止鏡頭
       }
     }, 15000); // 15 seconds
 
     return () => {
+      // 重要：當元件卸載或 Dialog 關閉時，必須取消動畫偵測
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
       }
+      // 清除計時器，避免 Dialog 關閉後仍彈出「掃描超時」的 Toast
       clearTimeout(scanTimeout);
+      // 移除監聽器以防記憶體洩漏
       video.removeEventListener('playing', handleVideoPlaying);
       setIsScanning(false);
     };
@@ -164,9 +178,8 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden">
-        <div className="relative aspect-square w-full bg-black flex items-center justify-center">
-          <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
-          
+        <div className="relative aspect-square w-full bg-black flex items-center justify-center">          
+          <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />           
           {(showPermissionError || showUnsupportedError) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 p-4 text-center">
                 <CameraOff className="h-16 w-16 text-destructive mb-4" />
@@ -177,7 +190,7 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
                     <AlertDescription>
                         {showPermissionError
                         ? '請允許相機權限以使用掃描功能。'
-                        : '您的瀏覽器不支援 Code 39 條碼掃描功能。'}
+                        : '您的瀏覽器不支援條碼掃描功能。'}
                     </AlertDescription>
                 </Alert>
             </div>
@@ -189,6 +202,7 @@ export function BarcodeScanner({ open, onOpenChange, onScan }: BarcodeScannerPro
 
           {hasCameraPermission && isDetectorSupported && (
             <>
+            {/* 視覺掃描框：使用者通常會把條碼放在這裡，請確保偵測區域邏輯與此 UI 重合 */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-1/3 border-2 border-dashed border-purple-300 rounded-lg"></div>
               {isScanning && (
                 <div className="absolute inset-0 overflow-hidden rounded-lg">

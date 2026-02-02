@@ -52,7 +52,7 @@ export function ItemList({ items }: ItemListProps) {
       <div className="mt-8 text-center text-muted-foreground py-10 border bg-purple-50/50 border-dashed rounded-xl">
         <Clock className="mx-auto h-10 w-10 text-purple-400" />
         <h3 className="mt-4 text-lg font-semibold text-purple-800">尚無核銷紀錄</h3>
-        <p className="mt-1 text-sm text-purple-600">使用上方表單來新增項目。</p>
+        <p className="mt-1 text-sm text-purple-600">掃描或手動輸入以新增第一筆紀錄。</p>
       </div>
     );
   }
@@ -67,14 +67,14 @@ export function ItemList({ items }: ItemListProps) {
                 <h3 className="font-semibold tracking-wider text-base text-purple-900">{item.barcode}</h3>
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <Clock className="h-3 w-3" />
-                  {item.createdAt && <ClientFormattedTime date={item.createdAt} />}
+                  <ClientFormattedTime date={item.createdAt} />
                 </div>
               </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
                 className="text-red-400 hover:bg-red-50 hover:text-red-500 rounded-full h-8 w-8" 
-                onClick={() => handleDelete(item.id!)}
+                onClick={() => handleDelete(item.id)}
                 disabled={isPending}
                 >
                 <Trash2 className="h-4 w-4" />
