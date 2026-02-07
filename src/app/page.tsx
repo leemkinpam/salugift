@@ -1,42 +1,29 @@
-import { DownloadList } from '@/components/item-list';
-import type { Download } from '@/lib/definitions';
-import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Suspense } from 'react';
+import { ScanForm } from '@/components/scan-form';
+import { Items } from '@/components/item-list';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Mock data based on the screenshot
-const mockDownloads: Download[] = [
-  { id: '1', filename: '580775913 1139010558447863 254333357075629582 n (1).jpg', createdAt: new Date() },
-  { id: '2', filename: '581434286 1139010538447865 1925109622440663797 n.jpg', createdAt: new Date() },
-  { id: '3', filename: '581787166 1139010428447876 4558871168859801218 n.jpg', createdAt: new Date() },
-  { id: '4', filename: '581794437 1139010415114544 5242064353256554152 n.jpg', createdAt: new Date() },
-  { id: '5', filename: '582544827 1139010388447880 6880995208826707793 n.jpg', createdAt: new Date() },
-  { id: '6', filename: '580596543 1139010001781252 2483057599435126820 n.jpg', createdAt: new Date() },
-];
+export const dynamic = 'force-dynamic';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-slate-50 text-foreground">
-      <header className="sticky top-0 z-10 bg-slate-50/80 backdrop-blur-sm border-b">
-        <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between h-16">
-                 <h1 className="text-xl font-semibold tracking-tight">
-                    下載記錄
-                </h1>
-                <div className="flex-1 flex justify-center px-8">
-                    <div className="w-full max-w-md relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input placeholder="搜尋下載記錄" className="pl-10 h-10 w-full rounded-full bg-slate-100 border-transparent focus:bg-white focus:border-slate-200" />
-                    </div>
-                </div>
-                <div className="w-24"></div> {/* Spacer */}
-            </div>
-        </div>
-      </header>
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-3xl mx-auto">
-          <DownloadList items={mockDownloads} />
-        </div>
-      </main>
+    <main className="min-h-screen bg-gradient-to-br from-purple-100 via-blue-100 to-indigo-200 p-4 sm:p-6 md:p-8">
+      <div className="max-w-md mx-auto">
+        <ScanForm />
+        <Suspense fallback={<ItemsSkeleton />}>
+          <Items />
+        </Suspense>
+      </div>
+    </main>
+  );
+}
+
+function ItemsSkeleton() {
+  return (
+    <div className="mt-8 space-y-3">
+      <Skeleton className="h-16 w-full rounded-xl" />
+      <Skeleton className="h-16 w-full rounded-xl" />
+      <Skeleton className="h-16 w-full rounded-xl" />
     </div>
   );
 }

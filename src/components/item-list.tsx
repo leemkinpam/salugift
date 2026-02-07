@@ -1,79 +1,97 @@
 'use client';
-import type { Download } from "@/lib/definitions";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Image as ImageIcon, Link, Copy, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from 'react';
+import { getItems } from '@/lib/supabase';
+import { deleteItem as dbDeleteItem } from '@/lib/actions';
+import type { Item } from '@/lib/definitions';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
-interface DownloadListProps {
-  items: Download[];
+function formatDateTime(date: Date) {
+  return new Intl.DateTimeFormat('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  }).format(date);
 }
 
-export function DownloadList({ items: initialItems }: DownloadListProps) {
-  const { toast } = useToast();
-  const [items, setItems] = useState<Download[]>(initialItems);
+// Client component to render the list of items
+export async function Items() {
+  const items = await getItems();
+  return <ItemList items={items} />;
+}
 
-  const handleDelete = (id: string) => {
+
+export function ItemList({ items: initialItems }: { items: Item[] }) {
+  const { toast } = useToast();
+  const [items, setItems] = useState<Item[]>(initialItems);
+  const [clientFormattedDates, setClientFormattedDates] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    // Format dates on the client to avoid hydration mismatch
+    const newFormattedDates: Record<string, string> = {};
+    items.forEach(item => {
+      newFormattedDates[item.id] = formatDateTime(new Date(item.created_at));
+    });
+    setClientFormattedDates(newFormattedDates);
+  }, [items]);
+
+  const handleDelete = async (id: number) => {
+    const originalItems = items;
     setItems(prevItems => prevItems.filter(item => item.id !== id));
-    toast({ title: "成功", description: "已刪除下載記錄。" });
+    
+    const result = await dbDeleteItem(id);
+
+    if (result.success) {
+      toast({ title: "成功", description: result.message });
+    } else {
+      setItems(originalItems);
+      toast({
+        variant: 'destructive',
+        title: "失敗",
+        description: result.message,
+      });
+    }
   };
-  
-  const handleCopy = (filename: string) => {
-    navigator.clipboard.writeText(filename);
-    toast({ title: "成功", description: "已複製檔案名稱。" });
-  }
 
   if (items.length === 0) {
     return (
-      <div className="mt-8 text-center text-muted-foreground py-10">
-        <h3 className="text-lg font-semibold">尚無下載紀錄</h3>
-        <p className="mt-1 text-sm">這裡會顯示您的下載歷史。</p>
+      <div className="mt-8 text-center text-muted-foreground py-10 border-2 border-dashed rounded-xl">
+        <h3 className="text-lg font-semibold">無核銷記錄</h3>
+        <p className="mt-1 text-sm">掃描的條碼將會顯示在這裡。</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-4">
-      <h2 className="text-sm font-medium text-muted-foreground px-2 mb-2">昨天</h2>
-      <div className="space-y-2">
+    <div className="mt-8">
+      <h2 className="text-sm font-medium text-muted-foreground px-2 mb-2">最近核銷</h2>
+      <div className="space-y-3">
         {items.map((item) => (
-          <Card key={item.id} className="shadow-sm bg-white rounded-lg border">
-            <CardContent className="p-3 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                <ImageIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
-                <a href="#" className="font-medium text-sm text-blue-600 truncate hover:underline" onClick={(e) => e.preventDefault()}>
-                  {item.filename}
-                </a>
+          <Card key={item.id} className="shadow-sm bg-white/50 backdrop-blur-sm rounded-xl border-purple-200/50">
+            <CardContent className="p-4 flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                <h3 className="font-semibold text-purple-900 truncate">{item.barcode}</h3>
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <span className="h-2 w-2 rounded-full bg-green-400"></span>
+                  <span className="font-mono">{clientFormattedDates[item.id] || <Skeleton className="h-4 w-32" />}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                 <Button 
+              <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-full h-8 w-8"
-                  aria-label="複製連結"
-                  >
-                  <Link className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-full h-8 w-8"
-                  onClick={() => handleCopy(item.filename)}
-                  aria-label="複製"
-                  >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                 <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-slate-500 hover:bg-red-50 hover:text-red-500 rounded-full h-8 w-8" 
+                  className="text-purple-500 hover:bg-red-50 hover:text-red-500 rounded-full h-10 w-10" 
                   onClick={() => handleDelete(item.id)}
                   aria-label="刪除"
                   >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-5 w-5" />
                 </Button>
-              </div>
             </CardContent>
           </Card>
         ))}

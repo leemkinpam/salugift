@@ -49,19 +49,14 @@ export function ScanForm() {
         });
         form.reset();
       } else {
-        // If there's a specific barcode error, use it for the form field.
-        if (result.errors?.barcode) {
-          form.setError('barcode', { message: result.errors.barcode[0] });
-        }
-        
-        // Customize the toast message for the "duplicate entry" case.
-        const isDuplicate = result.errors?.barcode?.includes('此條碼已存在。');
-        
         toast({
-          title: isDuplicate ? '禁止重複提交' : '錯誤',
-          description: isDuplicate ? '此條碼已在資料庫中，無法重複兌換。' : result.message || '發生未知錯誤。',
+          title: '錯誤',
+          description: result.message || '發生未知錯誤。',
           variant: 'destructive',
         });
+        if (result.errors) {
+          if (result.errors.barcode) form.setError('barcode', { message: result.errors.barcode[0] });
+        }
       }
     });
   }
