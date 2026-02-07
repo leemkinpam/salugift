@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: '條碼驗證系統',
-  description: '掃描條碼並儲存至您的資料庫。',
+  title: '下載記錄',
+  description: '查看您的下載記錄。',
 };
 
 export default function RootLayout({

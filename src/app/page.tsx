@@ -1,76 +1,42 @@
-import { getItems } from '@/lib/supabase';
-import { ScanForm } from '@/components/scan-form';
-import { ItemList } from '@/components/item-list';
-import { Suspense } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { QrCode, Clock } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { DownloadList } from '@/components/item-list';
+import type { Download } from '@/lib/definitions';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
+
+// Mock data based on the screenshot
+const mockDownloads: Download[] = [
+  { id: '1', filename: '580775913 1139010558447863 254333357075629582 n (1).jpg', createdAt: new Date() },
+  { id: '2', filename: '581434286 1139010538447865 1925109622440663797 n.jpg', createdAt: new Date() },
+  { id: '3', filename: '581787166 1139010428447876 4558871168859801218 n.jpg', createdAt: new Date() },
+  { id: '4', filename: '581794437 1139010415114544 5242064353256554152 n.jpg', createdAt: new Date() },
+  { id: '5', filename: '582544827 1139010388447880 6880995208826707793 n.jpg', createdAt: new Date() },
+  { id: '6', filename: '580596543 1139010001781252 2483057599435126820 n.jpg', createdAt: new Date() },
+];
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 text-foreground">
-      <main className="container mx-auto px-4 py-8 md:py-12">
-        <header className="flex items-center justify-center flex-col text-center gap-2 mb-8 md:mb-12">
-          <div className="flex items-center gap-4">
-            <div className="bg-primary p-3 rounded-xl text-primary-foreground shadow">
-              <QrCode className="h-8 w-8" />
+      <header className="sticky top-0 z-10 bg-slate-50/80 backdrop-blur-sm border-b">
+        <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between h-16">
+                 <h1 className="text-xl font-semibold tracking-tight">
+                    下載記錄
+                </h1>
+                <div className="flex-1 flex justify-center px-8">
+                    <div className="w-full max-w-md relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input placeholder="搜尋下載記錄" className="pl-10 h-10 w-full rounded-full bg-slate-100 border-transparent focus:bg-white focus:border-slate-200" />
+                    </div>
+                </div>
+                <div className="w-24"></div> {/* Spacer */}
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-left">
-                條碼驗證系統
-              </h1>
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                <p className="text-xs text-muted-foreground font-semibold tracking-wider">
-                  HYBRID STORAGE ACTIVE
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
-        <div className="max-w-md mx-auto">
-          <ScanForm />
-          <Suspense fallback={<ItemListSkeleton />}>
-            <Items />
-          </Suspense>
+        </div>
+      </header>
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto">
+          <DownloadList items={mockDownloads} />
         </div>
       </main>
-    </div>
-  );
-}
-
-async function Items() {
-  const items = await getItems();
-  return <ItemList items={items} />;
-}
-
-function ItemListSkeleton() {
-  return (
-    <div className="mt-8">
-      <div className="flex justify-between items-center mb-4 px-1">
-        <h2 className="text-sm font-semibold tracking-tight text-muted-foreground flex items-center gap-2">
-          <Clock className="h-4 w-4" />
-          <span>核銷紀錄日誌</span>
-        </h2>
-        <Badge variant="outline" className="font-mono text-xs">... TOTAL</Badge>
-      </div>
-      <div className="space-y-3">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i} className="shadow-sm bg-white rounded-xl">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="space-y-2">
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-4 w-48" />
-              </div>
-              <Skeleton className="h-10 w-10 rounded-full" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
     </div>
   );
 }

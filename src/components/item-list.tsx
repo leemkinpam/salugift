@@ -1,84 +1,79 @@
 'use client';
-import type { Item } from "@/lib/definitions";
+import type { Download } from "@/lib/definitions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2 } from "lucide-react";
-import { deleteItem } from "@/lib/actions";
+import { Image as ImageIcon, Link, Copy, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useTransition, useState, useEffect } from "react";
+import { useState } from "react";
 
-interface ItemListProps {
-  items: Item[];
+interface DownloadListProps {
+  items: Download[];
 }
 
-const ClientFormattedTime = ({ date }: { date: Date }) => {
-  const [formattedTime, setFormattedTime] = useState('');
-
-  useEffect(() => {
-    const formatDateTime = (d: Date) => {
-      return new Intl.DateTimeFormat('zh-TW', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true,
-      }).format(d).replace('上午', '上午 ').replace('下午', '下午 ');
-    };
-    setFormattedTime(formatDateTime(date));
-  }, [date]);
-
-  return <span className="font-mono">{formattedTime}</span>;
-}
-
-export function ItemList({ items }: ItemListProps) {
+export function DownloadList({ items: initialItems }: DownloadListProps) {
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
+  const [items, setItems] = useState<Download[]>(initialItems);
 
   const handleDelete = (id: string) => {
-    startTransition(async () => {
-      const result = await deleteItem(id);
-      if (result.success) {
-        toast({ title: "成功", description: result.message });
-      } else {
-        toast({ variant: "destructive", title: "錯誤", description: result.message });
-      }
-    });
+    setItems(prevItems => prevItems.filter(item => item.id !== id));
+    toast({ title: "成功", description: "已刪除下載記錄。" });
   };
+  
+  const handleCopy = (filename: string) => {
+    navigator.clipboard.writeText(filename);
+    toast({ title: "成功", description: "已複製檔案名稱。" });
+  }
 
   if (items.length === 0) {
     return (
-      <div className="mt-8 text-center text-muted-foreground py-10 border bg-purple-50/50 border-dashed rounded-xl">
-        <Clock className="mx-auto h-10 w-10 text-purple-400" />
-        <h3 className="mt-4 text-lg font-semibold text-purple-800">尚無核銷紀錄</h3>
-        <p className="mt-1 text-sm text-purple-600">掃描或手動輸入以新增第一筆紀錄。</p>
+      <div className="mt-8 text-center text-muted-foreground py-10">
+        <h3 className="text-lg font-semibold">尚無下載紀錄</h3>
+        <p className="mt-1 text-sm">這裡會顯示您的下載歷史。</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-8">
-      <div className="space-y-3">
+    <div className="mt-4">
+      <h2 className="text-sm font-medium text-muted-foreground px-2 mb-2">昨天</h2>
+      <div className="space-y-2">
         {items.map((item) => (
-          <Card key={item.id} className="shadow-sm bg-white rounded-xl border-purple-200/50">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex flex-col gap-1">
-                <h3 className="font-semibold tracking-wider text-base text-purple-900">{item.barcode}</h3>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <Clock className="h-3 w-3" />
-                  <ClientFormattedTime date={item.createdAt} />
-                </div>
+          <Card key={item.id} className="shadow-sm bg-white rounded-lg border">
+            <CardContent className="p-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <ImageIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
+                <a href="#" className="font-medium text-sm text-blue-600 truncate hover:underline" onClick={(e) => e.preventDefault()}>
+                  {item.filename}
+                </a>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-red-400 hover:bg-red-50 hover:text-red-500 rounded-full h-8 w-8" 
-                onClick={() => handleDelete(item.id)}
-                disabled={isPending}
-                >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                 <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-full h-8 w-8"
+                  aria-label="複製連結"
+                  >
+                  <Link className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-full h-8 w-8"
+                  onClick={() => handleCopy(item.filename)}
+                  aria-label="複製"
+                  >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                 <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-slate-500 hover:bg-red-50 hover:text-red-500 rounded-full h-8 w-8" 
+                  onClick={() => handleDelete(item.id)}
+                  aria-label="刪除"
+                  >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}

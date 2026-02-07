@@ -1,11 +1,9 @@
 import { z } from 'zod';
 
-export const ItemSchema = z.object({
+export const DownloadSchema = z.object({
   id: z.string(),
-  barcode: z
-    .string({ required_error: '條碼為必填項。' })
-    .min(1, '條碼不得為空。'),
+  filename: z.string(),
   createdAt: z.date(),
 });
 
-export type Item = z.infer<typeof ItemSchema>;
+export type Download = z.infer<typeof DownloadSchema>;
