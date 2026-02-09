@@ -1,9 +1,16 @@
 import { Suspense } from 'react';
 import { ScanForm } from '@/components/scan-form';
-import { Items } from '@/components/item-list';
+import { ItemList } from '@/components/item-list';
+import { getItems } from '@/lib/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const dynamic = 'force-dynamic';
+
+// This is a Server Component that fetches data and passes it to a Client Component.
+async function Items() {
+  const items = await getItems();
+  return <ItemList items={items} />;
+}
 
 export default function Home() {
   return (

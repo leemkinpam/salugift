@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { getItems } from '@/lib/supabase';
 import { deleteItem as dbDeleteItem } from '@/lib/actions';
 import type { Item } from '@/lib/definitions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,13 +19,6 @@ function formatDateTime(date: Date) {
     hour12: true,
   }).format(date);
 }
-
-// Client component to render the list of items
-export async function Items() {
-  const items = await getItems();
-  return <ItemList items={items} />;
-}
-
 
 export function ItemList({ items: initialItems }: { items: Item[] }) {
   const { toast } = useToast();
