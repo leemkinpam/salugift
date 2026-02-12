@@ -49,11 +49,13 @@ export function ScanForm() {
         });
         form.reset();
       } else {
+        const isDuplicate = result.message?.includes('重複核銷');
         toast({
-          title: '錯誤',
+          title: isDuplicate ? '重複核銷' : '提交失敗',
           description: result.message || '發生未知錯誤。',
           variant: 'destructive',
         });
+        
         if (result.errors) {
           if (result.errors.barcode) form.setError('barcode', { message: result.errors.barcode[0] });
         }
